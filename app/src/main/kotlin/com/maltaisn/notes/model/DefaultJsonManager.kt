@@ -41,7 +41,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.json.Json
-import java.security.KeyStore
 import java.util.Date
 import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
@@ -83,18 +82,20 @@ class DefaultJsonManager @Inject constructor(
         return if (prefs.shouldEncryptExportedData) {
             json.encodeToString(encryptNotesData(notesData))
         } else {
+            prefs.exportKeyMissing = false
             json.encodeToString(notesData)
         }
     }
 
     private suspend fun encryptNotesData(notesData: NotesData): EncryptedNotesData {
-        // Load the Android key store
-        val keyStore = KeyStore.getInstance("AndroidKeyStore")
-        withContext(Dispatchers.IO) {
-            keyStore.load(null)
+        // Retrieve the encryption key. It's missing if the app's data was restored from a backup,
+        // since keystore keys aren't backed up. Never fall back to exporting unencrypted data.
+        val keyStoreKey = withContext(Dispatchers.IO) { ExportKey.get() }
+        // Recorded so that the cause of a failed automatic export can be shown.
+        prefs.exportKeyMissing = keyStoreKey == null
+        if (keyStoreKey == null) {
+            throw ExportKeyMissingException()
         }
-        // Retrieve the encryption key
-        val keyStoreKey = keyStore.getKey(EXPORT_ENCRYPTION_KEY_ALIAS, null)
 
         // Initialize cipher object
         val cipher = Cipher.getInstance(EXPORT_ENCRYPTION_ALGORITHM)
@@ -105,6 +106,7 @@ class DefaultJsonManager @Inject constructor(
 
         return EncryptedNotesData(
             salt = prefs.encryptedExportKeyDerivationSalt,
+            iterations = prefs.encryptedExportKeyIterations,
             nonce = Base64.encodeToString(cipher.iv, BASE64_FLAGS),
             ciphertext = Base64.encodeToString(ciphertext, BASE64_FLAGS)
         )
@@ -117,7 +119,13 @@ class DefaultJsonManager @Inject constructor(
 
             // Key needs to be derived in order to decrypt the backup file
             if (importKey == null) {
+                if (encryptedNotesData.iterations !in ExportKeyDerivation.ACCEPTED_ITERATIONS) {
+                    // Not a value this app writes. Reject it, since key derivation
+                    // could otherwise run for an unreasonable amount of time.
+                    return ImportResult.BAD_DATA
+                }
                 prefs.encryptedImportKeyDerivationSalt = encryptedNotesData.salt
+                prefs.encryptedImportKeyIterations = encryptedNotesData.iterations
                 return ImportResult.KEY_MISSING_OR_INCORRECT
             }
 
@@ -286,7 +294,6 @@ class DefaultJsonManager @Inject constructor(
         private const val FIRST_VERSION = 3
 
         private const val EXPORT_ENCRYPTION_ALGORITHM = "AES/GCM/NoPadding"
-        private const val EXPORT_ENCRYPTION_KEY_ALIAS = "export_key"
 
         private const val BASE64_FLAGS = Base64.NO_WRAP or Base64.NO_PADDING
     }
@@ -336,6 +343,9 @@ private data class NotesData(
 private data class EncryptedNotesData(
     @SerialName("salt")
     val salt: String,
+    // Absent in files exported before the iteration count was stored.
+    @SerialName("iterations")
+    val iterations: Int = ExportKeyDerivation.LEGACY_ITERATIONS,
     @SerialName("nonce")
     val nonce: String,
     @SerialName("ciphertext")

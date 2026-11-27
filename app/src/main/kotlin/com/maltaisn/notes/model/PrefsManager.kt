@@ -52,9 +52,13 @@ interface PrefsManager {
     var shouldEncryptExportedData: Boolean
     var encryptedExportKeyDerivationSalt: String
     var encryptedImportKeyDerivationSalt: String
+    var encryptedExportKeyIterations: Int
+    var encryptedImportKeyIterations: Int
     var shouldAutoExport: Boolean
     var autoExportUri: String
     var autoExportFailed: Boolean
+    /** Whether the last export failed because encryption is enabled but its key is missing. */
+    var exportKeyMissing: Boolean
     var lastAutoExportTime: Long
 
     var lastTrashReminderTime: Long

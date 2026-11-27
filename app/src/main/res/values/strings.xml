@@ -232,6 +232,9 @@
     <string name="pref_data_auto_export">Automatic data export</string>
     <string name="pref_data_auto_export_summary">Automatically export the app\'s data to a file, once a day.</string>
     <string name="pref_data_auto_export_date">(Last exported on %s)</string>
+    <string name="pref_data_system_backup">Include notes in device backup</string>
+    <string name="pref_data_system_backup_summary">Lets Android back up your notes to your Google account.
+        Transfers to a new device always include them.</string>
     <string name="pref_data_import">Import data</string>
     <string name="pref_data_import_summary">Import previously exported JSON data, merging with existing data.</string>
     <string name="pref_data_export_archive">Export notes archive</string>
@@ -260,6 +263,12 @@
     <string name="encrypted_export_password_matching_error">Passwords do not match</string>
     <string name="encrypted_export_key_generation_successful">Encryption enabled successfully!</string>
     <string name="encrypted_export_key_deletion_successful">Encryption disabled successfully!</string>
+    <string name="encrypted_export_key_missing_title">Export password needed</string>
+    <string name="encrypted_export_key_missing_message">Encrypted export is on, but its password wasn\'t
+        restored with your data. Set the password again to keep exporting your notes. Until then,
+        exports will fail rather than save unencrypted data.</string>
+    <string name="encrypted_export_key_missing_later">Exports will fail until the export password is
+        set. You\'ll be asked again next time you open settings.</string>
     <string name="import_success">Data imported successfully!</string>
     <string name="import_future_version">Data imported successfully! Note that some information may
         have been lost because the data originates from a later version.</string>
@@ -277,6 +286,8 @@
         Click OK to proceed.</string>
     <string name="auto_export_fail">Failed to export data automatically. Make sure the export location
         still exists and is accessible, then reconfigure automatic export.</string>
+    <string name="auto_export_fail_key_missing">Failed to export data automatically because the export
+        password wasn\'t restored with your data. Open settings to set it again.</string>
 
     <!-- Content description -->
     <string name="content_descrp_open_drawer">Open drawer</string>

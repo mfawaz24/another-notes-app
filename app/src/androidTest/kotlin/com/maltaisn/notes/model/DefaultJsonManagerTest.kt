@@ -47,6 +47,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import java.security.KeyStore
 import javax.crypto.spec.SecretKeySpec
 import kotlin.test.assertEquals
@@ -72,6 +74,8 @@ class DefaultJsonManagerTest {
         prefsManager = mock {
             on { encryptedImportKeyDerivationSalt } doReturn "Wk7ITADlYDBTP/o8GtupJyWemvDClrDNxXKhoMBuTIp8QjlAlPdVAWfAi+B3GWTn/YmqgBP3OCK20Vmcm9hQbzwNfnXsnChnPu462ALv+WKf8y2NirINyWr5jG/tAOaE6bGNL+ZE4ClppTdBt82Gl87q6FX0pFqhJtmrE+8jLmI"
             on { encryptedExportKeyDerivationSalt } doReturn "Wk7ITADlYDBTP/o8GtupJyWemvDClrDNxXKhoMBuTIp8QjlAlPdVAWfAi+B3GWTn/YmqgBP3OCK20Vmcm9hQbzwNfnXsnChnPu462ALv+WKf8y2NirINyWr5jG/tAOaE6bGNL+ZE4ClppTdBt82Gl87q6FX0pFqhJtmrE+8jLmI"
+            on { encryptedExportKeyIterations } doReturn ExportKeyDerivation.CURRENT_ITERATIONS
+            on { encryptedImportKeyIterations } doReturn ExportKeyDerivation.CURRENT_ITERATIONS
         }
         jsonManager = DefaultJsonManager(notesDao, labelsDao, Json {
             encodeDefaults = false
@@ -623,5 +627,38 @@ class DefaultJsonManagerTest {
 }
         """.trim().replace("\n", "")
         assertEquals(ImportResult.FUTURE_VERSION, jsonManager.importJsonData(jsonData2, importKey = key))
+    }
+
+    private fun encryptedJsonWithIterations(iterations: Int?) = buildString {
+        append("""{"salt":"Wk7ITADlYDBTP/o8GtupJyWemvDClrDNxXKhoMBuTIp8QjlAlPdVAWfAi+B3GWTn/YmqgBP3OCK20Vmcm9hQbzwNfnXsnChnPu462ALv+WKf8y2NirINyWr5jG/tAOaE6bGNL+ZE4ClppTdBt82Gl87q6FX0pFqhJtmrE+8jLmI",""")
+        if (iterations != null) {
+            append(""""iterations":$iterations,""")
+        }
+        append(""""nonce":"B+kFILwu8GLF1noQ","ciphertext":"DwSQ5XQfkqTjhJf58JbrDZAMLhGQ"}""")
+    }
+
+    @Test
+    fun testEncryptedJsonImportLegacyIterations() = runBlocking {
+        // Files exported before the iteration count was stored use the legacy count.
+        assertEquals(ImportResult.KEY_MISSING_OR_INCORRECT,
+            jsonManager.importJsonData(encryptedJsonWithIterations(null)))
+        verify(prefsManager).encryptedImportKeyIterations = ExportKeyDerivation.LEGACY_ITERATIONS
+    }
+
+    @Test
+    fun testEncryptedJsonImportStoredIterations() = runBlocking {
+        assertEquals(ImportResult.KEY_MISSING_OR_INCORRECT,
+            jsonManager.importJsonData(encryptedJsonWithIterations(ExportKeyDerivation.CURRENT_ITERATIONS)))
+        verify(prefsManager).encryptedImportKeyIterations = ExportKeyDerivation.CURRENT_ITERATIONS
+    }
+
+    @Test
+    fun testEncryptedJsonImportUnreasonableIterations() = runBlocking {
+        assertEquals(ImportResult.BAD_DATA,
+            jsonManager.importJsonData(encryptedJsonWithIterations(Int.MAX_VALUE)))
+        assertEquals(ImportResult.BAD_DATA,
+            jsonManager.importJsonData(encryptedJsonWithIterations(0)))
+        verify(prefsManager, never()).encryptedImportKeyIterations = Int.MAX_VALUE
+        verify(prefsManager, never()).encryptedImportKeyIterations = 0
     }
 }

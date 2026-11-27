@@ -64,9 +64,15 @@ class DefaultPrefsManager @Inject constructor(
         "")
     override var encryptedImportKeyDerivationSalt: String by preference(ENCRYPTED_IMPORT_KEY_DERIVATION_SALT,
         "")
+    // Keys created before the iteration count was stored used the legacy count.
+    override var encryptedExportKeyIterations: Int by preference(ENCRYPTED_EXPORT_KEY_ITERATIONS,
+        ExportKeyDerivation.LEGACY_ITERATIONS)
+    override var encryptedImportKeyIterations: Int by preference(ENCRYPTED_IMPORT_KEY_ITERATIONS,
+        ExportKeyDerivation.LEGACY_ITERATIONS)
     override var shouldAutoExport: Boolean by preference(AUTO_EXPORT, false)
     override var autoExportUri: String by preference(AUTO_EXPORT_URI, "")
     override var autoExportFailed: Boolean by preference(AUTO_EXPORT_FAILED, false)
+    override var exportKeyMissing: Boolean by preference(EXPORT_KEY_MISSING, false)
     override var lastAutoExportTime: Long by preference(LAST_AUTO_EXPORT_TIME, 0)
 
     override var lastTrashReminderTime: Long by preference(LAST_TRASH_REMIND_TIME, 0)
@@ -192,6 +198,8 @@ class DefaultPrefsManager @Inject constructor(
         const val ENCRYPTED_EXPORT = "encrypted_export"
         const val EXPORT_DATA = "export_data"
         const val AUTO_EXPORT = "auto_export"
+        const val SYSTEM_BACKUP = "system_backup"
+        const val SYSTEM_BACKUP_DEFAULT = true
         const val IMPORT_DATA = "import_data"
         const val EXPORT_ARCHIVE = "export_archive"
         const val CLEAR_DATA = "clear_data"
@@ -207,8 +215,11 @@ class DefaultPrefsManager @Inject constructor(
         private const val LAST_RESTRICTED_BATTERY_REMIND_TIME = "last_restricted_battery_remind_time"
         private const val LAST_AUTO_EXPORT_TIME = "last_auto_export_time"
         private const val AUTO_EXPORT_FAILED = "auto_export_failed"
+        private const val EXPORT_KEY_MISSING = "export_key_missing"
         private const val ENCRYPTED_EXPORT_KEY_DERIVATION_SALT = "encrypted_export_key_derivation_salt"
         private const val ENCRYPTED_IMPORT_KEY_DERIVATION_SALT = "encrypted_import_key_derivation_salt"
+        private const val ENCRYPTED_EXPORT_KEY_ITERATIONS = "encrypted_export_key_iterations"
+        private const val ENCRYPTED_IMPORT_KEY_ITERATIONS = "encrypted_import_key_iterations"
 
         // Legacy keys
         private const val SWIPE_ACTION = "swipe_action"

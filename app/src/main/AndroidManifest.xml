@@ -32,6 +32,8 @@
         android:name="com.maltaisn.notes.App"
         android:theme="@style/AppTheme.DayNight"
         android:allowBackup="@bool/allow_backup"
+        android:backupAgent="com.maltaisn.notes.NotesBackupAgent"
+        android:fullBackupOnly="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -58,9 +60,9 @@
                 <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- Used by launcher shortcuts. These are harmless if sent by other apps. -->
             <intent-filter>
                 <action android:name="com.maltaisn.notes.CREATE" />
-                <action android:name="com.maltaisn.notes.EDIT" />
                 <action android:name="com.maltaisn.notes.SHOW_REMINDERS" />
             </intent-filter>
 
@@ -69,6 +71,15 @@
                 android:resource="@xml/shortcuts"
                 />
         </activity>
+
+        <!-- Non-exported entry point to MainActivity for intents that only the app itself may send,
+             such as opening a note from a reminder notification. MainActivity is exported,
+             so it checks that these intents came through this alias. -->
+        <activity-alias
+            android:name="com.maltaisn.notes.ui.main.InternalMainActivity"
+            android:targetActivity="com.maltaisn.notes.ui.main.MainActivity"
+            android:exported="false"
+            />
 
         <activity
             android:name="com.maltaisn.notes.ui.notification.NotificationActivity"

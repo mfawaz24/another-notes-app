@@ -161,6 +161,14 @@
             app:title="@string/pref_data_auto_export"
             />
 
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="system_backup"
+            app:singleLineTitle="false"
+            app:summary="@string/pref_data_system_backup_summary"
+            app:title="@string/pref_data_system_backup"
+            />
+
         <Preference
             app:icon="@drawable/ic_import"
             app:key="import_data"

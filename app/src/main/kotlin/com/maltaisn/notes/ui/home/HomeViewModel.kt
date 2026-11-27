@@ -343,7 +343,11 @@ class HomeViewModel @Inject constructor(
 
     private fun createActiveListItems(notes: List<NoteWithLabels>): List<NoteListItem> = buildList {
         if (prefs.autoExportFailed) {
-            this += MessageItem(AUTO_EXPORT_FAIL_ITEM_ID, R.string.auto_export_fail)
+            this += MessageItem(AUTO_EXPORT_FAIL_ITEM_ID, if (prefs.exportKeyMissing) {
+                R.string.auto_export_fail_key_missing
+            } else {
+                R.string.auto_export_fail
+            })
         }
 
         // Separate pinned and not pinned notes with headers

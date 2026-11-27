@@ -93,7 +93,9 @@ class AlarmReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
 
         // Edit/view main action
-        val notifIntent = Intent(context, MainActivity::class.java).apply {
+        // Sent through the non-exported alias, since MainActivity only accepts this action from it.
+        val notifIntent = Intent().apply {
+            setClassName(context, MainActivity.INTERNAL_ACTIVITY_ALIAS)
             action = MainActivity.INTENT_ACTION_EDIT
             putExtra(EXTRA_NOTE_ID, noteId)
         }
