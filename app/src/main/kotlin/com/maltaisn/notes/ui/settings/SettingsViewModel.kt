@@ -198,7 +198,6 @@ class SettingsViewModel @Inject constructor(
                 jsonManager.exportJsonData()
             } catch (_: ExportKeyMissingException) {
                 checkExportKey()
-                output.close()
                 return@launch
             } catch (_: Exception) {
                 showMessage(R.string.export_serialization_fail)
@@ -302,12 +301,7 @@ class SettingsViewModel @Inject constructor(
             ExportKey.store(aesKey)
             // Save iteration count only once the key it applies to is stored.
             prefsManager.encryptedExportKeyIterations = iterations
-
-            if (prefsManager.autoExportKeyMissing) {
-                // Last automatic export failed because the key was missing, which is now fixed.
-                prefsManager.autoExportFailed = false
-                prefsManager.autoExportKeyMissing = false
-            }
+            onExportKeyMissingResolved()
             showMessage(R.string.encrypted_export_key_generation_successful)
         }
     }
@@ -315,7 +309,19 @@ class SettingsViewModel @Inject constructor(
     fun deleteExportKey() {
         viewModelScope.launch(Dispatchers.IO) {
             ExportKey.delete()
+            onExportKeyMissingResolved()
             showMessage(R.string.encrypted_export_key_deletion_successful)
+        }
+    }
+
+    /**
+     * Called when a new export key is set or encryption is disabled. If the last export failed because the key
+     * was missing, clear that failure since its cause is resolved.
+     */
+    private fun onExportKeyMissingResolved() {
+        if (prefsManager.exportKeyMissing) {
+            prefsManager.exportKeyMissing = false
+            prefsManager.autoExportFailed = false
         }
     }
 

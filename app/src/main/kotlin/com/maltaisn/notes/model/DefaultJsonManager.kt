@@ -82,6 +82,7 @@ class DefaultJsonManager @Inject constructor(
         return if (prefs.shouldEncryptExportedData) {
             json.encodeToString(encryptNotesData(notesData))
         } else {
+            prefs.exportKeyMissing = false
             json.encodeToString(notesData)
         }
     }
@@ -90,7 +91,11 @@ class DefaultJsonManager @Inject constructor(
         // Retrieve the encryption key. It's missing if the app's data was restored from a backup,
         // since keystore keys aren't backed up. Never fall back to exporting unencrypted data.
         val keyStoreKey = withContext(Dispatchers.IO) { ExportKey.get() }
-            ?: throw ExportKeyMissingException()
+        // Recorded so that the cause of a failed automatic export can be shown.
+        prefs.exportKeyMissing = keyStoreKey == null
+        if (keyStoreKey == null) {
+            throw ExportKeyMissingException()
+        }
 
         // Initialize cipher object
         val cipher = Cipher.getInstance(EXPORT_ENCRYPTION_ALGORITHM)

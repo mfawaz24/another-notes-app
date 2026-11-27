@@ -72,7 +72,7 @@ class DefaultPrefsManager @Inject constructor(
     override var shouldAutoExport: Boolean by preference(AUTO_EXPORT, false)
     override var autoExportUri: String by preference(AUTO_EXPORT_URI, "")
     override var autoExportFailed: Boolean by preference(AUTO_EXPORT_FAILED, false)
-    override var autoExportKeyMissing: Boolean by preference(AUTO_EXPORT_KEY_MISSING, false)
+    override var exportKeyMissing: Boolean by preference(EXPORT_KEY_MISSING, false)
     override var lastAutoExportTime: Long by preference(LAST_AUTO_EXPORT_TIME, 0)
 
     override var lastTrashReminderTime: Long by preference(LAST_TRASH_REMIND_TIME, 0)
@@ -110,7 +110,6 @@ class DefaultPrefsManager @Inject constructor(
         shouldAutoExport = false
         lastAutoExportTime = 0
         autoExportFailed = false
-        autoExportKeyMissing = false
         autoExportUri = AUTO_EXPORT_NO_URI
     }
 
@@ -216,7 +215,7 @@ class DefaultPrefsManager @Inject constructor(
         private const val LAST_RESTRICTED_BATTERY_REMIND_TIME = "last_restricted_battery_remind_time"
         private const val LAST_AUTO_EXPORT_TIME = "last_auto_export_time"
         private const val AUTO_EXPORT_FAILED = "auto_export_failed"
-        private const val AUTO_EXPORT_KEY_MISSING = "auto_export_key_missing"
+        private const val EXPORT_KEY_MISSING = "export_key_missing"
         private const val ENCRYPTED_EXPORT_KEY_DERIVATION_SALT = "encrypted_export_key_derivation_salt"
         private const val ENCRYPTED_IMPORT_KEY_DERIVATION_SALT = "encrypted_import_key_derivation_salt"
         private const val ENCRYPTED_EXPORT_KEY_ITERATIONS = "encrypted_export_key_iterations"

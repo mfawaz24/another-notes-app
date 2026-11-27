@@ -167,7 +167,7 @@ class HomeViewModelTest {
     @Test
     fun `should show auto export failure message for missing export key`() = runTest {
         whenever(prefs.autoExportFailed) doReturn true
-        whenever(prefs.autoExportKeyMissing) doReturn true
+        whenever(prefs.exportKeyMissing) doReturn true
         notesRepo.deleteNote(2)
         notesRepo.deleteNote(5)
         val note = notesRepo.requireNoteById(1)
