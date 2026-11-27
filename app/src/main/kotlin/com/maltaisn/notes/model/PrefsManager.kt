@@ -52,6 +52,8 @@ interface PrefsManager {
     var shouldEncryptExportedData: Boolean
     var encryptedExportKeyDerivationSalt: String
     var encryptedImportKeyDerivationSalt: String
+    var encryptedExportKeyIterations: Int
+    var encryptedImportKeyIterations: Int
     var shouldAutoExport: Boolean
     var autoExportUri: String
     var autoExportFailed: Boolean

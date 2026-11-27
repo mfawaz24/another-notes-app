@@ -105,6 +105,7 @@ class DefaultJsonManager @Inject constructor(
 
         return EncryptedNotesData(
             salt = prefs.encryptedExportKeyDerivationSalt,
+            iterations = prefs.encryptedExportKeyIterations,
             nonce = Base64.encodeToString(cipher.iv, BASE64_FLAGS),
             ciphertext = Base64.encodeToString(ciphertext, BASE64_FLAGS)
         )
@@ -117,7 +118,13 @@ class DefaultJsonManager @Inject constructor(
 
             // Key needs to be derived in order to decrypt the backup file
             if (importKey == null) {
+                if (encryptedNotesData.iterations !in ExportKeyDerivation.ACCEPTED_ITERATIONS) {
+                    // Not a value this app writes. Reject it, since key derivation
+                    // could otherwise run for an unreasonable amount of time.
+                    return ImportResult.BAD_DATA
+                }
                 prefs.encryptedImportKeyDerivationSalt = encryptedNotesData.salt
+                prefs.encryptedImportKeyIterations = encryptedNotesData.iterations
                 return ImportResult.KEY_MISSING_OR_INCORRECT
             }
 
@@ -336,6 +343,9 @@ private data class NotesData(
 private data class EncryptedNotesData(
     @SerialName("salt")
     val salt: String,
+    // Absent in files exported before the iteration count was stored.
+    @SerialName("iterations")
+    val iterations: Int = ExportKeyDerivation.LEGACY_ITERATIONS,
     @SerialName("nonce")
     val nonce: String,
     @SerialName("ciphertext")

@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.maltaisn.notes.R
 import com.maltaisn.notes.model.ArchiveExporter
+import com.maltaisn.notes.model.ExportKeyDerivation
 import com.maltaisn.notes.model.JsonManager
 import com.maltaisn.notes.model.JsonManager.ImportResult
 import com.maltaisn.notes.model.LabelsRepository
@@ -44,10 +45,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.security.KeyStore
 import java.security.SecureRandom
-import javax.crypto.SecretKey
-import javax.crypto.SecretKeyFactory
-import javax.crypto.spec.PBEKeySpec
-import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
 
 @HiltViewModel
@@ -209,7 +206,8 @@ class SettingsViewModel @Inject constructor(
     fun importSavedEncryptedJsonData(password: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val salt = Base64.decode(prefsManager.encryptedImportKeyDerivationSalt, BASE64_FLAGS)
-            val decryptionKey = deriveKey(password, salt)
+            val decryptionKey = ExportKeyDerivation.deriveKey(password, salt,
+                prefsManager.encryptedImportKeyIterations)
 
             val result = jsonManager.importJsonData(importJsonData, decryptionKey)
             importJsonData = ""
@@ -254,7 +252,8 @@ class SettingsViewModel @Inject constructor(
             prefsManager.encryptedExportKeyDerivationSalt = Base64.encodeToString(salt, BASE64_FLAGS)
 
             // Derive key
-            val aesKey = deriveKey(password, salt)
+            val iterations = ExportKeyDerivation.CURRENT_ITERATIONS
+            val aesKey = ExportKeyDerivation.deriveKey(password, salt, iterations)
 
             // Store key in Android KeyStore
             val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
@@ -267,6 +266,8 @@ class SettingsViewModel @Inject constructor(
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                     .build()
             )
+            // Save iteration count only once the key it applies to is stored.
+            prefsManager.encryptedExportKeyIterations = iterations
             showMessage(R.string.encrypted_export_key_generation_successful)
         }
     }
@@ -278,15 +279,6 @@ class SettingsViewModel @Inject constructor(
             keyStore.deleteEntry(EXPORT_ENCRYPTION_KEY_ALIAS)
             showMessage(R.string.encrypted_export_key_deletion_successful)
         }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.M)
-    private fun deriveKey(password: String, salt: ByteArray): SecretKey {
-        val keySpec = PBEKeySpec(password.toCharArray(), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH)
-        val secretKeyFactory = SecretKeyFactory.getInstance(KEY_DERIVATION_ALGORITHM)
-        val secretKey = secretKeyFactory.generateSecret(keySpec)
-
-        return SecretKeySpec(secretKey.encoded, KeyProperties.KEY_ALGORITHM_AES)
     }
 
     fun clearData() {
@@ -312,8 +304,5 @@ class SettingsViewModel @Inject constructor(
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val BASE64_FLAGS = Base64.NO_WRAP or Base64.NO_PADDING
         private const val EXPORT_ENCRYPTION_KEY_ALIAS = "export_key"
-        private const val KEY_DERIVATION_ALGORITHM = "PBKDF2withHmacSHA512"
-        private const val PBKDF2_ITERATIONS = 120000
-        private const val PBKDF2_KEY_LENGTH = 256
     }
 }

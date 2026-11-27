@@ -64,6 +64,11 @@ class DefaultPrefsManager @Inject constructor(
         "")
     override var encryptedImportKeyDerivationSalt: String by preference(ENCRYPTED_IMPORT_KEY_DERIVATION_SALT,
         "")
+    // Keys created before the iteration count was stored used the legacy count.
+    override var encryptedExportKeyIterations: Int by preference(ENCRYPTED_EXPORT_KEY_ITERATIONS,
+        ExportKeyDerivation.LEGACY_ITERATIONS)
+    override var encryptedImportKeyIterations: Int by preference(ENCRYPTED_IMPORT_KEY_ITERATIONS,
+        ExportKeyDerivation.LEGACY_ITERATIONS)
     override var shouldAutoExport: Boolean by preference(AUTO_EXPORT, false)
     override var autoExportUri: String by preference(AUTO_EXPORT_URI, "")
     override var autoExportFailed: Boolean by preference(AUTO_EXPORT_FAILED, false)
@@ -209,6 +214,8 @@ class DefaultPrefsManager @Inject constructor(
         private const val AUTO_EXPORT_FAILED = "auto_export_failed"
         private const val ENCRYPTED_EXPORT_KEY_DERIVATION_SALT = "encrypted_export_key_derivation_salt"
         private const val ENCRYPTED_IMPORT_KEY_DERIVATION_SALT = "encrypted_import_key_derivation_salt"
+        private const val ENCRYPTED_EXPORT_KEY_ITERATIONS = "encrypted_export_key_iterations"
+        private const val ENCRYPTED_IMPORT_KEY_ITERATIONS = "encrypted_import_key_iterations"
 
         // Legacy keys
         private const val SWIPE_ACTION = "swipe_action"
