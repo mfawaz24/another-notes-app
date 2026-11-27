@@ -325,7 +325,10 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
                 }
                 INTENT_ACTION_EDIT -> {
                     // Intent to edit a specific note. This is used by reminder notification.
-                    viewModel.editNote(intent.getLongExtra(AlarmReceiver.EXTRA_NOTE_ID, Note.NO_ID))
+                    // Only accept it through the non-exported alias, so other apps can't open notes.
+                    if (intent.component?.className == INTERNAL_ACTIVITY_ALIAS) {
+                        viewModel.editNote(intent.getLongExtra(AlarmReceiver.EXTRA_NOTE_ID, Note.NO_ID))
+                    }
                 }
                 INTENT_ACTION_SHOW_REMINDERS -> {
                     // Show reminders screen in HomeFragment. Used by launcher shortcut.
@@ -372,6 +375,12 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
 
         const val INTENT_ACTION_CREATE = "com.maltaisn.notes.CREATE"
         const val INTENT_ACTION_EDIT = "com.maltaisn.notes.EDIT"
+
+        /**
+         * Non-exported alias of this activity (see manifest), for intents only the app itself may send.
+         * Intents sent through it have this as their component class name.
+         */
+        const val INTERNAL_ACTIVITY_ALIAS = "com.maltaisn.notes.ui.main.InternalMainActivity"
         const val INTENT_ACTION_SHOW_REMINDERS = "com.maltaisn.notes.SHOW_REMINDERS"
     }
 }
