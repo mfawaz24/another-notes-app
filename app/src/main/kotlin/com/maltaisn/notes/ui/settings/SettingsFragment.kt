@@ -224,6 +224,10 @@ class SettingsFragment : PreferenceFragmentCompat(), ConfirmDialog.Callback, Exp
             true
         }
 
+        // Backup is disabled entirely in debug builds, so the option would have no effect.
+        requirePreference<SwitchPreferenceCompat>(DefaultPrefsManager.SYSTEM_BACKUP).isVisible =
+            resources.getBoolean(R.bool.allow_backup)
+
         val encryptedExportPref: SwitchPreferenceCompat = requirePreference(DefaultPrefsManager.ENCRYPTED_EXPORT)
         // Older versions don't support PBKDF2withHmacSHA512
         if (Build.VERSION.SDK_INT < 26) {

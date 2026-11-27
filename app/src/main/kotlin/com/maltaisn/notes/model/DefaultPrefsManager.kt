@@ -197,6 +197,8 @@ class DefaultPrefsManager @Inject constructor(
         const val ENCRYPTED_EXPORT = "encrypted_export"
         const val EXPORT_DATA = "export_data"
         const val AUTO_EXPORT = "auto_export"
+        const val SYSTEM_BACKUP = "system_backup"
+        const val SYSTEM_BACKUP_DEFAULT = true
         const val IMPORT_DATA = "import_data"
         const val EXPORT_ARCHIVE = "export_archive"
         const val CLEAR_DATA = "clear_data"

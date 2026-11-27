@@ -32,6 +32,8 @@
         android:name="com.maltaisn.notes.App"
         android:theme="@style/AppTheme.DayNight"
         android:allowBackup="@bool/allow_backup"
+        android:backupAgent="com.maltaisn.notes.NotesBackupAgent"
+        android:fullBackupOnly="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
