@@ -28,6 +28,7 @@ import androidx.navigation.NavDirections
 import com.maltaisn.notes.NavGraphMainDirections
 import com.maltaisn.notes.R
 import com.maltaisn.notes.model.DefaultPrefsManager
+import com.maltaisn.notes.model.ExportKeyMissingException
 import com.maltaisn.notes.model.JsonManager
 import com.maltaisn.notes.model.LabelsRepository
 import com.maltaisn.notes.model.NotesRepository
@@ -234,6 +235,7 @@ class MainViewModel @Inject constructor(
     fun autoExport(output: OutputStream?) {
         if (output != null) {
             viewModelScope.launch(Dispatchers.IO) {
+                var keyMissing = false
                 prefsManager.autoExportFailed = try {
                     val jsonData = jsonManager.exportJsonData()
                     output.use {
@@ -241,12 +243,18 @@ class MainViewModel @Inject constructor(
                     }
                     prefsManager.lastAutoExportTime = System.currentTimeMillis()
                     false
+                } catch (_: ExportKeyMissingException) {
+                    // Encryption is enabled but its key wasn't restored with the app's data.
+                    keyMissing = true
+                    true
                 } catch (_: Exception) {
                     true
                 }
+                prefsManager.autoExportKeyMissing = keyMissing
             }
         } else {
             prefsManager.autoExportFailed = true
+            prefsManager.autoExportKeyMissing = false
         }
     }
 

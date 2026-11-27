@@ -57,6 +57,8 @@ interface PrefsManager {
     var shouldAutoExport: Boolean
     var autoExportUri: String
     var autoExportFailed: Boolean
+    /** Whether the last automatic export failed because the export key was missing. */
+    var autoExportKeyMissing: Boolean
     var lastAutoExportTime: Long
 
     var lastTrashReminderTime: Long

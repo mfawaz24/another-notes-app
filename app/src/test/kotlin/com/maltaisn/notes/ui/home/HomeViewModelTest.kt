@@ -150,6 +150,37 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `should show auto export failure message`() = runTest {
+        whenever(prefs.autoExportFailed) doReturn true
+        notesRepo.deleteNote(2)
+        notesRepo.deleteNote(5)
+        val note = notesRepo.requireNoteById(1)
+        viewModel.setDestination(HomeDestination.Status(NoteStatus.ACTIVE))
+
+        assertEquals(listOf(
+            MessageItem(-9, R.string.auto_export_fail),
+            HomeViewModel.PINNED_HEADER_ITEM,
+            noteItem(note)
+        ), viewModel.noteItems.getOrAwaitValue())
+    }
+
+    @Test
+    fun `should show auto export failure message for missing export key`() = runTest {
+        whenever(prefs.autoExportFailed) doReturn true
+        whenever(prefs.autoExportKeyMissing) doReturn true
+        notesRepo.deleteNote(2)
+        notesRepo.deleteNote(5)
+        val note = notesRepo.requireNoteById(1)
+        viewModel.setDestination(HomeDestination.Status(NoteStatus.ACTIVE))
+
+        assertEquals(listOf(
+            MessageItem(-9, R.string.auto_export_fail_key_missing),
+            HomeViewModel.PINNED_HEADER_ITEM,
+            noteItem(note)
+        ), viewModel.noteItems.getOrAwaitValue())
+    }
+
+    @Test
     fun `should show only archived notes`() = runTest {
         val note = notesRepo.requireNoteById(3)
         viewModel.setDestination(HomeDestination.Status(NoteStatus.ARCHIVED))

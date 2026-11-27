@@ -41,7 +41,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.json.Json
-import java.security.KeyStore
 import java.util.Date
 import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
@@ -88,13 +87,10 @@ class DefaultJsonManager @Inject constructor(
     }
 
     private suspend fun encryptNotesData(notesData: NotesData): EncryptedNotesData {
-        // Load the Android key store
-        val keyStore = KeyStore.getInstance("AndroidKeyStore")
-        withContext(Dispatchers.IO) {
-            keyStore.load(null)
-        }
-        // Retrieve the encryption key
-        val keyStoreKey = keyStore.getKey(EXPORT_ENCRYPTION_KEY_ALIAS, null)
+        // Retrieve the encryption key. It's missing if the app's data was restored from a backup,
+        // since keystore keys aren't backed up. Never fall back to exporting unencrypted data.
+        val keyStoreKey = withContext(Dispatchers.IO) { ExportKey.get() }
+            ?: throw ExportKeyMissingException()
 
         // Initialize cipher object
         val cipher = Cipher.getInstance(EXPORT_ENCRYPTION_ALGORITHM)
@@ -293,7 +289,6 @@ class DefaultJsonManager @Inject constructor(
         private const val FIRST_VERSION = 3
 
         private const val EXPORT_ENCRYPTION_ALGORITHM = "AES/GCM/NoPadding"
-        private const val EXPORT_ENCRYPTION_KEY_ALIAS = "export_key"
 
         private const val BASE64_FLAGS = Base64.NO_WRAP or Base64.NO_PADDING
     }

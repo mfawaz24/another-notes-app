@@ -17,8 +17,6 @@
 package com.maltaisn.notes.ui.settings
 
 import android.os.Build
-import android.security.keystore.KeyProperties
-import android.security.keystore.KeyProtection
 import android.util.Base64
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
@@ -28,7 +26,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.maltaisn.notes.R
 import com.maltaisn.notes.model.ArchiveExporter
+import com.maltaisn.notes.model.ExportKey
 import com.maltaisn.notes.model.ExportKeyDerivation
+import com.maltaisn.notes.model.ExportKeyMissingException
 import com.maltaisn.notes.model.JsonManager
 import com.maltaisn.notes.model.JsonManager.ImportResult
 import com.maltaisn.notes.model.LabelsRepository
@@ -43,7 +43,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.io.InputStream
 import java.io.OutputStream
-import java.security.KeyStore
 import java.security.SecureRandom
 import javax.inject.Inject
 
@@ -78,6 +77,10 @@ class SettingsViewModel @Inject constructor(
     val showImportPasswordDialogEvent: LiveData<Event<Unit>>
         get() = _showImportPasswordDialogEvent
 
+    private val _showExportKeyMissingDialogEvent = MutableLiveData<Event<Unit>>()
+    val showExportKeyMissingDialogEvent: LiveData<Event<Unit>>
+        get() = _showExportKeyMissingDialogEvent
+
     private val _askNotificationPermission = MutableLiveData<Event<Unit>>()
     val askNotificationPermission: LiveData<Event<Unit>>
         get() = _askNotificationPermission
@@ -98,8 +101,40 @@ class SettingsViewModel @Inject constructor(
             savedStateHandle[KEY_EXPORT_TYPE] = value
         }
 
+    /**
+     * Whether the export password dialog is shown to replace a missing export key,
+     * rather than to enable encryption. Cancelling it then leaves encryption enabled.
+     */
+    var isReplacingMissingExportKey: Boolean = savedStateHandle[KEY_REPLACING_MISSING_EXPORT_KEY] ?: false
+        set(value) {
+            field = value
+            savedStateHandle[KEY_REPLACING_MISSING_EXPORT_KEY] = value
+        }
+
     init {
         _lastAutoExport.value = prefsManager.lastAutoExportTime
+
+        // Check once per screen, not again when it's recreated with the dialog already shown.
+        if (KEY_EXPORT_KEY_CHECKED !in savedStateHandle) {
+            savedStateHandle[KEY_EXPORT_KEY_CHECKED] = true
+            viewModelScope.launch(Dispatchers.IO) {
+                checkExportKey()
+            }
+        }
+    }
+
+    /**
+     * If encrypted export is enabled but its key is missing, ask the user to set the password again.
+     * This happens after the app's data is restored from a backup, since keystore keys aren't backed up.
+     * Returns whether the key is missing.
+     */
+    private fun checkExportKey(): Boolean {
+        // Encrypted export isn't available before API 26.
+        if (Build.VERSION.SDK_INT < 26 || !prefsManager.shouldEncryptExportedData || ExportKey.exists()) {
+            return false
+        }
+        _showExportKeyMissingDialogEvent.postValue(Event(Unit))
+        return true
     }
 
     private suspend fun tryExport(action: suspend () -> Unit) {
@@ -120,6 +155,10 @@ class SettingsViewModel @Inject constructor(
     private suspend fun exportJsonData(output: OutputStream) {
         val jsonData = try {
             jsonManager.exportJsonData()
+        } catch (_: ExportKeyMissingException) {
+            checkExportKey()
+            output.close()
+            return
         } catch (_: Exception) {
             showMessage(R.string.export_serialization_fail)
             return
@@ -157,6 +196,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val jsonData = try {
                 jsonManager.exportJsonData()
+            } catch (_: ExportKeyMissingException) {
+                checkExportKey()
+                output.close()
+                return@launch
             } catch (_: Exception) {
                 showMessage(R.string.export_serialization_fail)
                 return@launch
@@ -256,27 +299,22 @@ class SettingsViewModel @Inject constructor(
             val aesKey = ExportKeyDerivation.deriveKey(password, salt, iterations)
 
             // Store key in Android KeyStore
-            val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
-            keyStore.load(null)
-            keyStore.setEntry(
-                EXPORT_ENCRYPTION_KEY_ALIAS,
-                KeyStore.SecretKeyEntry(aesKey),
-                KeyProtection.Builder(KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
-                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                    .build()
-            )
+            ExportKey.store(aesKey)
             // Save iteration count only once the key it applies to is stored.
             prefsManager.encryptedExportKeyIterations = iterations
+
+            if (prefsManager.autoExportKeyMissing) {
+                // Last automatic export failed because the key was missing, which is now fixed.
+                prefsManager.autoExportFailed = false
+                prefsManager.autoExportKeyMissing = false
+            }
             showMessage(R.string.encrypted_export_key_generation_successful)
         }
     }
 
     fun deleteExportKey() {
         viewModelScope.launch(Dispatchers.IO) {
-            val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
-            keyStore.load(null)
-            keyStore.deleteEntry(EXPORT_ENCRYPTION_KEY_ALIAS)
+            ExportKey.delete()
             showMessage(R.string.encrypted_export_key_deletion_successful)
         }
     }
@@ -297,12 +335,12 @@ class SettingsViewModel @Inject constructor(
     companion object {
         private const val KEY_IMPORTED_JSON_DATA = "importedJsonData"
         private const val KEY_EXPORT_TYPE = "exportType"
+        private const val KEY_EXPORT_KEY_CHECKED = "exportKeyChecked"
+        private const val KEY_REPLACING_MISSING_EXPORT_KEY = "replacingMissingExportKey"
 
         private const val EXPORT_TYPE_JSON = "json"
         private const val EXPORT_TYPE_ZIP = "zip"
 
-        private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val BASE64_FLAGS = Base64.NO_WRAP or Base64.NO_PADDING
-        private const val EXPORT_ENCRYPTION_KEY_ALIAS = "export_key"
     }
 }

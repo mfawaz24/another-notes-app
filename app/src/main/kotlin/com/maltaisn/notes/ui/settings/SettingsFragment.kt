@@ -180,6 +180,15 @@ class SettingsFragment : PreferenceFragmentCompat(), ConfirmDialog.Callback, Exp
             ImportPasswordDialog.newInstance()
                 .show(childFragmentManager, null)
         }
+        viewModel.showExportKeyMissingDialogEvent.observeEvent(viewLifecycleOwner) {
+            if (childFragmentManager.findFragmentByTag(EXPORT_KEY_MISSING_DIALOG_TAG) == null) {
+                ConfirmDialog.newInstance(
+                    title = R.string.encrypted_export_key_missing_title,
+                    message = R.string.encrypted_export_key_missing_message,
+                    btnPositive = R.string.encrypted_export_dialog_title,
+                ).show(childFragmentManager, EXPORT_KEY_MISSING_DIALOG_TAG)
+            }
+        }
         viewModel.askNotificationPermission.observeEvent(viewLifecycleOwner) {
             notificationPermission?.request()
         }
@@ -330,6 +339,12 @@ class SettingsFragment : PreferenceFragmentCompat(), ConfirmDialog.Callback, Exp
                 viewModel.clearData()
             }
 
+            EXPORT_KEY_MISSING_DIALOG_TAG -> {
+                viewModel.isReplacingMissingExportKey = true
+                ExportPasswordDialog.newInstance()
+                    .show(childFragmentManager, null)
+            }
+
             AUTOMATIC_EXPORT_DIALOG_TAG -> {
                 val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
                     .setType("application/json")
@@ -344,6 +359,8 @@ class SettingsFragment : PreferenceFragmentCompat(), ConfirmDialog.Callback, Exp
 
     override fun onDialogNegativeButtonClicked(tag: String?) {
         when (tag) {
+            EXPORT_KEY_MISSING_DIALOG_TAG -> showMessage(R.string.encrypted_export_key_missing_later)
+
             AUTOMATIC_EXPORT_DIALOG_TAG -> {
                 // No file chosen for auto export, disable it.
                 autoExportPref.isChecked = false
@@ -356,6 +373,8 @@ class SettingsFragment : PreferenceFragmentCompat(), ConfirmDialog.Callback, Exp
 
     override fun onDialogCancelled(tag: String?) {
         when (tag) {
+            EXPORT_KEY_MISSING_DIALOG_TAG -> showMessage(R.string.encrypted_export_key_missing_later)
+
             AUTOMATIC_EXPORT_DIALOG_TAG -> {
                 // No file chosen for auto export, disable it.
                 autoExportPref.isChecked = false
@@ -371,15 +390,28 @@ class SettingsFragment : PreferenceFragmentCompat(), ConfirmDialog.Callback, Exp
 
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onExportPasswordDialogPositiveButtonClicked(password: String) {
+        viewModel.isReplacingMissingExportKey = false
         viewModel.generateExportKeyFromPassword(password)
     }
 
     override fun onExportPasswordDialogNegativeButtonClicked() {
-        exportEncryptionPref.isChecked = false
+        onExportPasswordDialogDismissed()
     }
 
     override fun onExportPasswordDialogCancelled() {
-        exportEncryptionPref.isChecked = false
+        onExportPasswordDialogDismissed()
+    }
+
+    private fun onExportPasswordDialogDismissed() {
+        if (viewModel.isReplacingMissingExportKey) {
+            // Keep encryption enabled: exports fail until a password is set,
+            // rather than silently switching to unencrypted exports.
+            viewModel.isReplacingMissingExportKey = false
+            showMessage(R.string.encrypted_export_key_missing_later)
+        } else {
+            // Encryption was being enabled, but no password was set.
+            exportEncryptionPref.isChecked = false
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -391,6 +423,7 @@ class SettingsFragment : PreferenceFragmentCompat(), ConfirmDialog.Callback, Exp
         private const val RESTART_DIALOG_TAG = "restart_dialog"
         private const val CLEAR_DATA_DIALOG_TAG = "clear_data_dialog"
         private const val AUTOMATIC_EXPORT_DIALOG_TAG = "automatic_export_dialog"
+        private const val EXPORT_KEY_MISSING_DIALOG_TAG = "export_key_missing_dialog"
         private const val NOTIF_PERMISSION_DIALOG = "notif-permission-dialog"
     }
 }
