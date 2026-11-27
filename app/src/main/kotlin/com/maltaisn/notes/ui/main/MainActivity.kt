@@ -60,8 +60,6 @@ import com.maltaisn.notes.ui.main.MainViewModel.NewNoteData
 import com.maltaisn.notes.ui.navigation.HomeDestination
 import com.maltaisn.notes.ui.observeEvent
 import dagger.hilt.android.AndroidEntryPoint
-import java.io.IOException
-import java.io.InputStreamReader
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -350,14 +348,10 @@ class MainActivity : AppCompatActivity(), NavController.OnDestinationChangedList
                 @Suppress("DEPRECATION")
                 val uri = extras.get(Intent.EXTRA_STREAM) as? Uri
                 if (uri != null) {
-                    try {
-                        val reader = InputStreamReader(contentResolver.openInputStream(uri))
-                        val title = uri.pathSegments.last()
-                        val content = reader.readText()
+                    val shared = SharedFileReader.read(contentResolver, uri, packageName)
+                    if (shared != null) {
+                        val (title, content) = shared
                         noteData = NewNoteData(NoteType.TEXT, title, content)
-                        reader.close()
-                    } catch (_: IOException) {
-                        // nothing to do (file doesn't exist, access error, etc)
                     }
                 }
             } else {
